@@ -1,0 +1,2 @@
+CREATE DATABASE golang_social;
+CREATE EXTENSION IF NOT EXISTS citext;

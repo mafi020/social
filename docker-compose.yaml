@@ -1,0 +1,21 @@
+# Use postgres/example user/password credentials
+
+services:
+
+  db:
+    image: postgres:16.9-alpine3.22
+    container_name: postgres-db
+    restart: always
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    environment:
+      POSTGRES_BD: golang_social
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  db-data:      
