@@ -9,6 +9,7 @@ import (
 type UsersInterface interface {
 	Create(context.Context, *models.User) error
 	GetById(context.Context, int64) (*models.User, error)
+	Delete(context.Context, int64) error
 	GetByEmail(context.Context, string) (*models.User, error)
 	GetByUsername(context.Context, string) (*models.User, error)
 	IsUserUnique(context.Context, string, string) (map[string]string, error)

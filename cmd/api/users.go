@@ -3,7 +3,10 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/mafi020/social/internal/errs"
 	"github.com/mafi020/social/internal/models"
 	"github.com/mafi020/social/internal/utils"
 )
@@ -47,12 +50,62 @@ func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := app.store.Users.Create(ctx, user); err != nil {
-		utils.WriteJSONError(w, http.StatusInternalServerError, err.Error())
+		app.internalServerError(w, r, err)
 		return
 	}
 
-	if err := utils.WriteJSON(w, http.StatusCreated, user); err != nil {
-		utils.WriteJSONError(w, http.StatusInternalServerError, err.Error())
+	if err := utils.JSONResponse(w, http.StatusCreated, user); err != nil {
+		app.internalServerError(w, r, err)
 		return
 	}
+}
+func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
+	paramUserId := chi.URLParam(r, "userID")
+	userId, err := strconv.ParseInt(paramUserId, 10, 64)
+	if err != nil {
+		app.badRequestError(w, r, errors.New("invalid user ID"))
+		return
+	}
+	ctx := r.Context()
+	user, err := app.store.Users.GetById(ctx, userId)
+	if err != nil {
+		switch {
+		case errors.Is(err, errs.ErrNotFound):
+			app.notFoundError(w, r, err)
+		default:
+			app.internalServerError(w, r, err)
+		}
+		return
+	}
+	if err := utils.JSONResponse(w, http.StatusOK, user); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
+}
+func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	paramUserID := chi.URLParam(r, "userID")
+
+	userID, err := strconv.ParseInt(paramUserID, 10, 64)
+	if err != nil {
+		app.badRequestError(w, r, errors.New("invalid user ID"))
+		return
+	}
+
+	ctx := r.Context()
+	if err := app.store.Users.Delete(ctx, userID); err != nil {
+		switch {
+		case errors.Is(err, errs.ErrNotFound):
+			app.notFoundError(w, r, err)
+		default:
+			app.internalServerError(w, r, err)
+		}
+		return
+	}
+
+	if err := utils.JSONResponse(w, http.StatusOK, map[string]string{"message": "User deleted successfully"}); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
 }

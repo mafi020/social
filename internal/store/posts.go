@@ -134,7 +134,6 @@ func (s *PostStore) Delete(ctx context.Context, postId int64) error {
 
 	return nil
 }
-
 func (s *PostStore) Update(ctx context.Context, post *models.Post) error {
 	query := `
 		UPDATE posts

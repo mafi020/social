@@ -18,9 +18,20 @@ func ReadJSON(r *http.Request, data any) error {
 	return decoder.Decode(data)
 }
 
-func WriteJSONError(w http.ResponseWriter, status int, message any) error {
+func JSONErrorResponse(w http.ResponseWriter, status int, message any) error {
 	type errorStruct struct {
-		Error any `json:"error"`
+		Success bool `json:"success"`
+		Status  int  `json:"status"`
+		Error   any  `json:"error"`
 	}
-	return WriteJSON(w, status, &errorStruct{Error: message})
+	return WriteJSON(w, status, &errorStruct{Success: false, Status: status, Error: message})
+}
+
+func JSONResponse(w http.ResponseWriter, status int, data any) error {
+	type responseStruct struct {
+		Success bool `json:"success"`
+		Status  int  `json:"status"`
+		Data    any  `json:"data"`
+	}
+	return WriteJSON(w, status, &responseStruct{Success: true, Status: status, Data: data})
 }

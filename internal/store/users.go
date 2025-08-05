@@ -38,7 +38,6 @@ func (s *UserStore) Create(ctx context.Context, user *models.User) error {
 	}
 	return nil
 }
-
 func (s *UserStore) GetById(ctx context.Context, userId int64) (*models.User, error) {
 	query := `
 		SELECT id, username, email, created_at, updated_at
@@ -59,7 +58,6 @@ func (s *UserStore) GetById(ctx context.Context, userId int64) (*models.User, er
 	}
 	return user, nil
 }
-
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
 		SELECT id, username, email, created_at, updated_at
@@ -80,7 +78,6 @@ func (s *UserStore) GetByEmail(ctx context.Context, email string) (*models.User,
 	}
 	return user, nil
 }
-
 func (s *UserStore) GetByUsername(ctx context.Context, username string) (*models.User, error) {
 	query := `
 		SELECT id, username, email, created_at, updated_at
@@ -101,7 +98,6 @@ func (s *UserStore) GetByUsername(ctx context.Context, username string) (*models
 	}
 	return user, nil
 }
-
 func (s *UserStore) IsUserUnique(ctx context.Context, email, username string) (map[string]string, error) {
 	query := `
 		SELECT email, username
@@ -140,4 +136,26 @@ func (s *UserStore) IsUserUnique(ctx context.Context, email, username string) (m
 	}
 
 	return errors, nil
+}
+func (s *UserStore) Delete(ctx context.Context, userID int64) error {
+	query := `
+		DELETE FROM users
+		WHERE id=$1
+	`
+
+	res, err := s.db.ExecContext(ctx, query, userID)
+
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errs.ErrNotFound
+	}
+	return nil
 }

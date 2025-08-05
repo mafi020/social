@@ -46,7 +46,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 
 	}
 
-	if err := utils.WriteJSON(w, http.StatusCreated, post); err != nil {
+	if err := utils.JSONResponse(w, http.StatusCreated, post); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
@@ -79,7 +79,7 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, errs.ErrNotFound):
-			utils.WriteJSONError(w, http.StatusNotFound, err.Error())
+			app.notFoundError(w, r, err)
 		default:
 			app.internalServerError(w, r, err)
 		}
@@ -88,7 +88,7 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	post.Comments = comments
 
-	if err := utils.WriteJSON(w, http.StatusOK, post); err != nil {
+	if err := utils.JSONResponse(w, http.StatusOK, post); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
@@ -113,7 +113,7 @@ func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "Post Deleted Successfully"}); err != nil {
+	if err := utils.JSONResponse(w, http.StatusOK, map[string]string{"message": "Post Deleted Successfully"}); err != nil {
 		app.internalServerError(w, r, err)
 	}
 }
@@ -173,7 +173,7 @@ func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request
 
 	post.Comments = []models.Comment{}
 
-	if err := utils.WriteJSON(w, http.StatusOK, post); err != nil {
+	if err := utils.JSONResponse(w, http.StatusOK, post); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}

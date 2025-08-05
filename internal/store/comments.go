@@ -3,7 +3,9 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 
+	"github.com/mafi020/social/internal/errs"
 	"github.com/mafi020/social/internal/models"
 )
 
@@ -77,4 +79,73 @@ func (s *CommentStore) GetCommentsByPostID(ctx context.Context, postID int64) ([
 	}
 
 	return comments, nil
+}
+func (s *CommentStore) GetByID(ctx context.Context, commentID int64) (*models.Comment, error) {
+	query := `
+		SELECT id, post_id, user_id, content, created_at, updated_at
+		FROM comments
+		WHERE id=$1
+	`
+
+	comment := &models.Comment{}
+
+	err := s.db.QueryRowContext(ctx, query, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.UpdatedAt)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errs.ErrNotFound
+		default:
+			return nil, err
+		}
+	}
+	return comment, nil
+}
+func (s *CommentStore) Update(ctx context.Context, comment *models.Comment) error {
+	query := `
+		UPDATE comments
+		SET content=$1
+		WHERE id=$2
+		RETURNING id, post_id, user_id, content, created_at, updated_at
+	`
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		comment.Content,
+		comment.ID,
+	).Scan(
+		&comment.ID,
+		&comment.PostID,
+		&comment.UserID,
+		&comment.Content,
+		&comment.CreatedAt,
+		&comment.UpdatedAt,
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (s *CommentStore) Delete(ctx context.Context, commentID int64) error {
+	query := `
+		DELETE FROM comments
+		WHERE id=$1
+	`
+
+	res, err := s.db.ExecContext(ctx, query, commentID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errs.ErrNotFound
+	}
+
+	return nil
 }
