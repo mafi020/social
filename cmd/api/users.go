@@ -190,6 +190,8 @@ func (app *application) getUserFeedHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	log.Printf("Feeds %v", feed)
+
 	if len(feed) == 0 {
 		feed = []dto.Feed{}
 	}

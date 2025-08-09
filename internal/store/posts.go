@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	"github.com/lib/pq"
 	"github.com/mafi020/social/internal/dto"
@@ -163,67 +164,8 @@ func (s *PostStore) Update(ctx context.Context, post *dto.Post) error {
 	}
 	return nil
 }
-
-// func (s *PostStore) Feed(ctx context.Context, userID int64, q dto.FeedQueryParams) ([]dto.Feed, int, error) {
-// 	countQuery := `
-//         SELECT COUNT(*)
-//         FROM posts p
-//         JOIN followers f ON f.follower_id = p.user_id OR p.user_id = $1
-//         WHERE f.user_id = $1 OR p.user_id = $1
-//     `
-// 	var totalCount int
-// 	err := s.db.QueryRowContext(ctx, countQuery, userID).Scan(&totalCount)
-// 	if err != nil {
-// 		return nil, 0, err
-// 	}
-
-// 	offset := (q.Page - 1) * q.Limit
-
-// 	query := `
-//         SELECT
-//             p.id, p.user_id, p.title, p.content, p.tags, p.created_at,
-//             COUNT(c.id) AS comment_count,
-//             u.id, u.username
-//         FROM posts p
-//         LEFT JOIN comments c ON c.post_id = p.id
-//         LEFT JOIN users u ON u.id = p.user_id
-//         JOIN followers f ON f.follower_id = p.user_id OR p.user_id = $1
-//         WHERE f.user_id = $1 OR p.user_id = $1
-//         GROUP BY p.id, u.id, u.username
-//         ORDER BY p.created_at DESC
-//         LIMIT $2 OFFSET $3
-//     `
-
-// 	rows, err := s.db.QueryContext(ctx, query, userID, q.Limit, offset)
-// 	if err != nil {
-// 		return nil, 0, err
-// 	}
-// 	defer rows.Close()
-
-// 	var feed []dto.Feed
-// 	for rows.Next() {
-// 		var f dto.Feed
-// 		err := rows.Scan(
-// 			&f.ID,
-// 			&f.UserID,
-// 			&f.Title,
-// 			&f.Content,
-// 			pq.Array(&f.Tags),
-// 			&f.CreatedAt,
-// 			&f.CommentsCount,
-// 			&f.User.ID,
-// 			&f.User.UserName,
-// 		)
-// 		if err != nil {
-// 			return nil, 0, err
-// 		}
-// 		feed = append(feed, f)
-// 	}
-
-// 	return feed, totalCount, nil
-// }
-
 func (s *PostStore) Feed(ctx context.Context, userID int64, params dto.FeedQueryParams) ([]dto.Feed, int, error) {
+	log.Printf("Params %v", params)
 	countQuery := `
 		SELECT COUNT(DISTINCT p.id)
 		FROM posts p
@@ -234,17 +176,21 @@ func (s *PostStore) Feed(ctx context.Context, userID int64, params dto.FeedQuery
 				p.title ILIKE '%' || $2 || '%' OR
 				p.content ILIKE '%' || $2 || '%'
 			)
-			AND EXISTS (
-				SELECT 1 FROM unnest($3::text[]) AS tag 
-				WHERE tag = ANY(p.tags)
+			AND (
+				cardinality($3::text[]) = 0 OR
+				EXISTS (
+					SELECT 1 FROM unnest($3::text[]) AS tag 
+					WHERE tag = ANY(p.tags)
+				)
 			)
+
 
 	`
 
 	var totalCount int
 	var tagsParam any
 	if len(params.Tags) == 0 {
-		tagsParam = pq.Array([]string{}) // Pass empty array instead of nil
+		tagsParam = pq.Array([]string{})
 	} else {
 		tagsParam = pq.Array(params.Tags)
 	}
@@ -257,8 +203,8 @@ func (s *PostStore) Feed(ctx context.Context, userID int64, params dto.FeedQuery
 
 	query := `
         SELECT
-            p.id, p.user_id, p.title, p.content, p.tags, p.created_at,
-            COUNT(c.id) AS comment_count,
+            p.id, p.user_id, p.title, p.content, p.tags, p.created_at, p.updated_at,
+            COUNT(c.id) AS comments_count,
             u.id, u.username
         FROM posts p
         LEFT JOIN comments c ON c.post_id = p.id
@@ -271,9 +217,12 @@ func (s *PostStore) Feed(ctx context.Context, userID int64, params dto.FeedQuery
 				p.title ILIKE '%' || $4 || '%' OR
 				p.content ILIKE '%' || $4 || '%'
 			)
-			AND EXISTS (
-				SELECT 1 FROM unnest($5::text[]) AS tag 
-				WHERE tag = ANY(p.tags)
+			AND (
+				cardinality($5::text[]) = 0 OR
+				EXISTS (
+					SELECT 1 FROM unnest($5::text[]) AS tag 
+					WHERE tag = ANY(p.tags)
+				)
 			)
         GROUP BY p.id, u.id, u.username
         ORDER BY p.created_at DESC
@@ -296,6 +245,7 @@ func (s *PostStore) Feed(ctx context.Context, userID int64, params dto.FeedQuery
 			&f.Content,
 			pq.Array(&f.Tags),
 			&f.CreatedAt,
+			&f.UpdatedAt,
 			&f.CommentsCount,
 			&f.User.ID,
 			&f.User.UserName,

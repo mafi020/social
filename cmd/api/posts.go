@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -33,18 +34,19 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 
 	ctx := r.Context()
 
-	post := &dto.Post{
+	post := dto.Post{
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
 		UserID:  payload.UserID,
 	}
 
-	if err := app.store.Posts.Create(ctx, post); err != nil {
+	if err := app.store.Posts.Create(ctx, &post); err != nil {
 		app.internalServerError(w, r, err)
 		return
-
 	}
+
+	post.Comments = []dto.Comment{}
 
 	if err := utils.JSONResponse(w, http.StatusCreated, post); err != nil {
 		app.internalServerError(w, r, err)
@@ -120,6 +122,7 @@ func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request
 
 // Important to use pointer to distinguish between intentional empty fields and struct generated nil fields if not provided
 type updatePostPayload struct {
+	// Ttile type as pointer string means, it'a an optional field
 	Title   *string   `json:"title" validate:"omitempty,min=1"`
 	Content *string   `json:"content" validate:"omitempty,min=1"`
 	Tags    *[]string `json:"tags" validate:"omitempty,min=1"`
@@ -138,6 +141,8 @@ func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request
 		app.badRequestError(w, r, errors.New(err.Error()))
 		return
 	}
+
+	log.Printf("After reading the data %+v", payload)
 
 	if validationErrors := utils.ValidateStruct(&payload); validationErrors != nil {
 		app.failedValidationError(w, r, validationErrors)
