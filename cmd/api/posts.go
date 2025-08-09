@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mafi020/social/internal/dto"
 	"github.com/mafi020/social/internal/errs"
-	"github.com/mafi020/social/internal/models"
 	"github.com/mafi020/social/internal/utils"
 )
 
@@ -33,7 +33,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 
 	ctx := r.Context()
 
-	post := &models.Post{
+	post := &dto.Post{
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
@@ -171,7 +171,7 @@ func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	post.Comments = []models.Comment{}
+	post.Comments = []dto.Comment{}
 
 	if err := utils.JSONResponse(w, http.StatusOK, post); err != nil {
 		app.internalServerError(w, r, err)

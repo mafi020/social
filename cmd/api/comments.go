@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mafi020/social/internal/dto"
 	"github.com/mafi020/social/internal/errs"
-	"github.com/mafi020/social/internal/models"
 	"github.com/mafi020/social/internal/utils"
 )
 
@@ -30,7 +30,7 @@ func (app *application) createCommentHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
-	comment := &models.Comment{
+	comment := &dto.Comment{
 		PostID:  payload.PostID,
 		UserID:  payload.UserID,
 		Content: payload.Content,
@@ -47,7 +47,7 @@ func (app *application) createCommentHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	comment.User = models.CommentUser{
+	comment.User = dto.CommentUser{
 		ID:       userData.ID,
 		UserName: userData.UserName,
 	}

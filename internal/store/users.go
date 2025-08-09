@@ -5,15 +5,15 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/mafi020/social/internal/dto"
 	"github.com/mafi020/social/internal/errs"
-	"github.com/mafi020/social/internal/models"
 )
 
 type UserStore struct {
 	db *sql.DB
 }
 
-func (s *UserStore) Create(ctx context.Context, user *models.User) error {
+func (s *UserStore) Create(ctx context.Context, user *dto.User) error {
 	query := `
 		INSERT INTO users (username, email, password)
 		VALUES ($1, $2, $3) RETURNING id, username, email, created_at, updated_at
@@ -38,13 +38,13 @@ func (s *UserStore) Create(ctx context.Context, user *models.User) error {
 	}
 	return nil
 }
-func (s *UserStore) GetById(ctx context.Context, userId int64) (*models.User, error) {
+func (s *UserStore) GetById(ctx context.Context, userId int64) (*dto.User, error) {
 	query := `
 		SELECT id, username, email, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
-	user := &models.User{}
+	user := &dto.User{}
 
 	err := s.db.QueryRowContext(ctx, query, userId).Scan(&user.ID, &user.UserName, &user.Email, &user.CreatedAt, &user.UpdatedAt)
 
@@ -58,13 +58,13 @@ func (s *UserStore) GetById(ctx context.Context, userId int64) (*models.User, er
 	}
 	return user, nil
 }
-func (s *UserStore) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+func (s *UserStore) GetByEmail(ctx context.Context, email string) (*dto.User, error) {
 	query := `
 		SELECT id, username, email, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
-	user := &models.User{}
+	user := &dto.User{}
 
 	err := s.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UserName, &user.Email, &user.CreatedAt, &user.UpdatedAt)
 
@@ -78,13 +78,13 @@ func (s *UserStore) GetByEmail(ctx context.Context, email string) (*models.User,
 	}
 	return user, nil
 }
-func (s *UserStore) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+func (s *UserStore) GetByUsername(ctx context.Context, username string) (*dto.User, error) {
 	query := `
 		SELECT id, username, email, created_at, updated_at
 		FROM users
 		WHERE username = $1
 	`
-	user := &models.User{}
+	user := &dto.User{}
 
 	err := s.db.QueryRowContext(ctx, query, username).Scan(&user.ID, &user.UserName, &user.Email, &user.CreatedAt, &user.UpdatedAt)
 

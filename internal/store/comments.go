@@ -5,15 +5,15 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/mafi020/social/internal/dto"
 	"github.com/mafi020/social/internal/errs"
-	"github.com/mafi020/social/internal/models"
 )
 
 type CommentStore struct {
 	db *sql.DB
 }
 
-func (s *CommentStore) Create(ctx context.Context, comment *models.Comment) error {
+func (s *CommentStore) Create(ctx context.Context, comment *dto.Comment) error {
 	query := `
 		INSERT INTO comments(post_id, user_id, content)
 		VALUES($1, $2, $3) RETURNING id, post_id, user_id, content, created_at, updated_at
@@ -39,8 +39,7 @@ func (s *CommentStore) Create(ctx context.Context, comment *models.Comment) erro
 	}
 	return nil
 }
-
-func (s *CommentStore) GetCommentsByPostID(ctx context.Context, postID int64) ([]models.Comment, error) {
+func (s *CommentStore) GetCommentsByPostID(ctx context.Context, postID int64) ([]dto.Comment, error) {
 	query := `
 		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, c.updated_at, u.id, u.username FROM comments c
 		JOIN users u
@@ -56,10 +55,10 @@ func (s *CommentStore) GetCommentsByPostID(ctx context.Context, postID int64) ([
 	}
 	defer rows.Close()
 
-	comments := []models.Comment{}
+	comments := []dto.Comment{}
 	for rows.Next() {
-		var comment models.Comment
-		comment.User = models.CommentUser{}
+		var comment dto.Comment
+		comment.User = dto.CommentUser{}
 
 		err := rows.Scan(
 			&comment.ID,
@@ -80,14 +79,14 @@ func (s *CommentStore) GetCommentsByPostID(ctx context.Context, postID int64) ([
 
 	return comments, nil
 }
-func (s *CommentStore) GetByID(ctx context.Context, commentID int64) (*models.Comment, error) {
+func (s *CommentStore) GetByID(ctx context.Context, commentID int64) (*dto.Comment, error) {
 	query := `
 		SELECT id, post_id, user_id, content, created_at, updated_at
 		FROM comments
 		WHERE id=$1
 	`
 
-	comment := &models.Comment{}
+	comment := &dto.Comment{}
 
 	err := s.db.QueryRowContext(ctx, query, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.UpdatedAt)
 
@@ -101,7 +100,7 @@ func (s *CommentStore) GetByID(ctx context.Context, commentID int64) (*models.Co
 	}
 	return comment, nil
 }
-func (s *CommentStore) Update(ctx context.Context, comment *models.Comment) error {
+func (s *CommentStore) Update(ctx context.Context, comment *dto.Comment) error {
 	query := `
 		UPDATE comments
 		SET content=$1

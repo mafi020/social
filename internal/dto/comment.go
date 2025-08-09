@@ -1,4 +1,4 @@
-package models
+package dto
 
 type Comment struct {
 	ID        int64       `json:"id"`

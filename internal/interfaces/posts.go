@@ -3,12 +3,13 @@ package interfaces
 import (
 	"context"
 
-	"github.com/mafi020/social/internal/models"
+	"github.com/mafi020/social/internal/dto"
 )
 
 type PostsInterface interface {
-	Create(context.Context, *models.Post) error
-	GetByID(context.Context, int64) (*models.Post, error)
+	Create(context.Context, *dto.Post) error
+	GetByID(context.Context, int64) (*dto.Post, error)
 	Delete(context.Context, int64) error
-	Update(context.Context, *models.Post) error
+	Update(context.Context, *dto.Post) error
+	Feed(context.Context, int64, dto.FeedQueryParams) ([]dto.Feed, int, error)
 }

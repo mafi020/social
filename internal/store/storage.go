@@ -7,15 +7,17 @@ import (
 )
 
 type Storage struct {
-	Posts    interfaces.PostsInterface
-	Users    interfaces.UsersInterface
-	Comments interfaces.CommentsInterface
+	Posts     interfaces.PostsInterface
+	Users     interfaces.UsersInterface
+	Comments  interfaces.CommentsInterface
+	Followers interfaces.FollowersInterface
 }
 
 func NewPostgresStorage(db *sql.DB) Storage {
 	return Storage{
-		Posts:    &PostStore{db},
-		Users:    &UserStore{db},
-		Comments: &CommentStore{db},
+		Posts:     &PostStore{db},
+		Users:     &UserStore{db},
+		Comments:  &CommentStore{db},
+		Followers: &FollowerStore{db},
 	}
 }
