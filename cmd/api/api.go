@@ -7,7 +7,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 	"github.com/mafi020/social/internal/store"
+	"go.uber.org/zap"
 )
 
 type dbConfig struct {
@@ -19,13 +21,21 @@ type dbConfig struct {
 
 type config struct {
 	port string
-	db   dbConfig
+	db   *dbConfig
 	env  string
 }
 
 type application struct {
-	config config
+	config *config
 	store  store.Storage
+	logger *zap.SugaredLogger
+}
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 }
 
 func (app *application) mount() http.Handler {
@@ -80,7 +90,6 @@ func (app *application) mount() http.Handler {
 }
 
 func (app *application) start(mux http.Handler) error {
-
 	server := &http.Server{
 		Addr:         app.config.port,
 		Handler:      mux,
@@ -88,6 +97,6 @@ func (app *application) start(mux http.Handler) error {
 		ReadTimeout:  time.Second * 10,
 		IdleTimeout:  time.Minute,
 	}
-	log.Printf("Server running on port %s", app.config.port)
+	app.logger.Infow("Server running on port "+app.config.port, "env", app.config.env)
 	return server.ListenAndServe()
 }
