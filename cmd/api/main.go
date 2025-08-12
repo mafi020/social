@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/mafi020/social/internal/db"
 	"github.com/mafi020/social/internal/env"
-	"github.com/mafi020/social/internal/logger"
+	log "github.com/mafi020/social/internal/logger"
 	"github.com/mafi020/social/internal/store"
 )
 
@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// Logger: https://github.com/uber-go/zap
-	logger := logger.New()
+	logger := log.New()
 	defer logger.Sync()
 
 	// Configure the Postgres DB

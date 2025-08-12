@@ -53,16 +53,20 @@ func (app *application) mount() http.Handler {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", app.healthCheckHandler)
-		r.Route("/posts", func(r chi.Router) {
-			r.Post("/", app.createPostHandler)
-			r.Route("/{postID}", func(r chi.Router) {
-				r.Get("/", app.getPostHandler)
-				r.Delete("/", app.deletePostHandler)
-				r.Patch("/", app.updatePostHandler)
-			})
+
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", app.registerUserHandler)
 		})
+
+		r.Route("/invitations", func(r chi.Router) {
+			r.Post("/", app.createInvitationHandler)
+			r.Get("/accept", app.acceptInvitationHandler)
+			// r.Route("/{invitationID}", func(r chi.Router) {
+			// 	r.Patch("", app.updateInvitationHandler)
+			// })
+		})
+
 		r.Route("/users", func(r chi.Router) {
-			r.Post("/", app.createUserHandler)
 			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.userFromRouteMiddleware)
 
@@ -76,6 +80,16 @@ func (app *application) mount() http.Handler {
 				r.Get("/feed", app.getUserFeedHandler)
 			})
 		})
+
+		r.Route("/posts", func(r chi.Router) {
+			r.Post("/", app.createPostHandler)
+			r.Route("/{postID}", func(r chi.Router) {
+				r.Get("/", app.getPostHandler)
+				r.Delete("/", app.deletePostHandler)
+				r.Patch("/", app.updatePostHandler)
+			})
+		})
+
 		r.Route("/comments", func(r chi.Router) {
 			r.Post("/", app.createCommentHandler)
 			r.Route("/{commentID}", func(r chi.Router) {

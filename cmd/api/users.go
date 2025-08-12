@@ -17,54 +17,6 @@ type userKey string
 
 const targetUserCtx userKey = "user"
 
-type createUserPayload struct {
-	UserName string `json:"username" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request) {
-	var payload createUserPayload
-
-	if err := utils.ReadJSON(r, &payload); err != nil {
-		app.badRequestError(w, r, errors.New(err.Error()))
-		return
-	}
-
-	if err := utils.ValidateStruct(&payload); err != nil {
-		app.failedValidationError(w, r, err)
-		return
-	}
-
-	ctx := r.Context()
-
-	validationErrors, err := app.store.Users.IsUserUnique(ctx, payload.Email, payload.UserName)
-	if err != nil {
-		app.internalServerError(w, r, err)
-		return
-	}
-
-	if validationErrors != nil {
-		app.failedValidationError(w, r, validationErrors)
-		return
-	}
-
-	user := &dto.User{
-		UserName: payload.UserName,
-		Email:    payload.Email,
-		Password: payload.Password,
-	}
-
-	if err := app.store.Users.Create(ctx, user); err != nil {
-		app.internalServerError(w, r, err)
-		return
-	}
-
-	if err := utils.JSONResponse(w, http.StatusCreated, user); err != nil {
-		app.internalServerError(w, r, err)
-		return
-	}
-}
 func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	paramUserId := chi.URLParam(r, "userID")
 	userId, err := strconv.ParseInt(paramUserId, 10, 64)
