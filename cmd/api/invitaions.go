@@ -52,10 +52,7 @@ func (app *application) createInvitationHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if err := app.sendInvitationEmail(inv); err != nil {
-		app.internalServerError(w, r, err)
-		return
-	}
+	app.sendInvitationEmail(inv)
 
 	now := time.Now()
 	inv.EmailSentAt = &now
@@ -110,10 +107,8 @@ func (app *application) refreshAndResendInvitation(ctx context.Context, w http.R
 		return nil
 	}
 
-	if err := app.sendInvitationEmail(inv); err != nil {
-		app.internalServerError(w, r, err)
-		return nil
-	}
+	app.sendInvitationEmail(inv)
+
 	if err := utils.JSONResponse(w, http.StatusCreated, inv); err != nil {
 		app.internalServerError(w, r, err)
 	}
@@ -152,22 +147,21 @@ func (app *application) handleExistingInvitation(ctx context.Context, w http.Res
 	return false
 }
 
-func (app *application) sendInvitationEmail(inv *dto.Invitation) error {
+func (app *application) sendInvitationEmail(inv *dto.Invitation) {
 	plainTextContent, htmlContent := templates.EmailInvitation(inv.Token)
-
-	if err := utils.SendEmail(
-		"Social Golang Company",
-		env.GetEnvOrPanic("COMPANY_EMAIL"), // must match SendGrid verified sender
-		"",
-		inv.Email,
-		"Invitation to Join Social 🎉",
-		plainTextContent,
-		htmlContent,
-	); err != nil {
-		app.logger.Error("failed to send invitation email", "error", err)
-		return err
-	}
-	return nil
+	go func() {
+		if err := utils.SendEmail(
+			"Social Golang Company",
+			env.GetEnvOrPanic("COMPANY_EMAIL"), // must match SendGrid verified sender
+			"",
+			inv.Email,
+			"Invitation to Join Social 🎉",
+			plainTextContent,
+			htmlContent,
+		); err != nil {
+			app.logger.Error("failed to send invitation email", "error", err)
+		}
+	}()
 }
 
 func (app *application) acceptInvitationHandler(w http.ResponseWriter, r *http.Request) {

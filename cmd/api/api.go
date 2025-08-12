@@ -61,9 +61,6 @@ func (app *application) mount() http.Handler {
 		r.Route("/invitations", func(r chi.Router) {
 			r.Post("/", app.createInvitationHandler)
 			r.Get("/accept", app.acceptInvitationHandler)
-			// r.Route("/{invitationID}", func(r chi.Router) {
-			// 	r.Patch("", app.updateInvitationHandler)
-			// })
 		})
 
 		r.Route("/users", func(r chi.Router) {

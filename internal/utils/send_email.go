@@ -10,6 +10,10 @@ import (
 )
 
 func SendEmail(fromName, fromEmail, toName, toEmail, subject, plainTextContent, htmlContent string) error {
+	if fromEmail == "" {
+		fromEmail = env.GetEnvOrPanic("COMPANY_EMAIL")
+	}
+
 	from := mail.NewEmail(fromName, fromEmail)
 	to := mail.NewEmail(toName, toEmail)
 
