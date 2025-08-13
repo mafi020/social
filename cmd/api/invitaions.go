@@ -9,6 +9,7 @@ import (
 	"github.com/mafi020/social/internal/dto"
 	"github.com/mafi020/social/internal/env"
 	"github.com/mafi020/social/internal/errs"
+	"github.com/mafi020/social/internal/middleware"
 	"github.com/mafi020/social/internal/templates"
 	"github.com/mafi020/social/internal/utils"
 )
@@ -40,11 +41,11 @@ func (app *application) createInvitationHandler(w http.ResponseWriter, r *http.R
 
 	if existingInv != nil {
 		if app.handleExistingInvitation(ctx, w, r, existingInv) {
-			return // handled — stop here
+			return
 		}
 	}
 
-	inviterID := int64(1) // TODO: use auth user ID
+	inviterID := middleware.GetAuthUserIDFromContext(r)
 
 	inv, err := app.createNewInvitation(ctx, inviterID, payload.Email)
 	if err != nil {
@@ -108,6 +109,14 @@ func (app *application) refreshAndResendInvitation(ctx context.Context, w http.R
 	}
 
 	app.sendInvitationEmail(inv)
+
+	now := time.Now()
+	inv.EmailSentAt = &now
+
+	if err := app.store.Invitations.UpdateEmailStatus(ctx, inv.ID, &now); err != nil {
+		app.internalServerError(w, r, err)
+		return nil
+	}
 
 	if err := utils.JSONResponse(w, http.StatusCreated, inv); err != nil {
 		app.internalServerError(w, r, err)

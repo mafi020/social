@@ -28,7 +28,7 @@ func EmailInvitation(token string) (string, string) {
 					</a>
 				</p>
 				<p>This link will expire in 48 hours.</p>
-				<p>Best regards,<br>The Socail Team</p>
+				<p>Best regards,<br>The Social Team</p>
 			</body>
 		</html>
 	`, inviteLink)

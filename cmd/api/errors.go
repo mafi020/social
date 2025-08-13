@@ -25,7 +25,3 @@ func (app *application) notFoundError(w http.ResponseWriter, r *http.Request, er
 	app.logger.Warnw("not found error", "method", r.Method, "path", r.URL.Path, "errors", err)
 	utils.JSONErrorResponse(w, http.StatusNotFound, "resource not found")
 }
-
-/*
-{"level":"warn","ts":1754876023.6537068,"caller":"api/errors.go:20","msg":"invalid data error!(EXTRA method=POST, path=/api/posts, errors=map[content:Content is required title:Title is required])"}
-*/

@@ -4,12 +4,13 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func GetEnvOrPanic(key string) string {
-	val := os.Getenv(key)
+	val := strings.TrimSpace(os.Getenv(key))
 	if val == "" {
-		log.Panicf("Environment variable %s no found", key)
+		log.Panicf("Environment variable %s not found", key)
 	}
 	return val
 }

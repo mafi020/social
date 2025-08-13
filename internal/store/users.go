@@ -60,13 +60,13 @@ func (s *UserStore) GetById(ctx context.Context, userId int64) (*dto.User, error
 }
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*dto.User, error) {
 	query := `
-		SELECT id, username, email, created_at, updated_at
+		SELECT id, username, email, password, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
 	user := &dto.User{}
 
-	err := s.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UserName, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	err := s.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UserName, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		switch {

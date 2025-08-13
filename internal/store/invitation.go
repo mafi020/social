@@ -128,7 +128,7 @@ func (s *InvitationStore) Update(ctx context.Context, inv *dto.Invitation) error
 		UPDATE invitations
 		SET status = $1, expires_at = $2, updated_at = NOW()
 		WHERE id = $3
-		RETURNING id, email, token, status, expires_at, created_at, updated_at
+		RETURNING id, inviter_id, email, token, status, expires_at, created_at, updated_at
 	`
 	err := s.db.QueryRowContext(
 		ctx,
@@ -138,6 +138,7 @@ func (s *InvitationStore) Update(ctx context.Context, inv *dto.Invitation) error
 		inv.ID,
 	).Scan(
 		&inv.ID,
+		&inv.InviterID,
 		&inv.Email,
 		&inv.Token,
 		&inv.Status,

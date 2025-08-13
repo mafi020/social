@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/mafi020/social/internal/dto"
 	"github.com/mafi020/social/internal/errs"
+	"github.com/mafi020/social/internal/middleware"
 	"github.com/mafi020/social/internal/utils"
 )
 
@@ -69,7 +70,7 @@ func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request
 }
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	targetUser := getTargetUserFromContext(r) // user from route param
-	loggedInUserID := int64(1)                // TODO: get from auth
+	loggedInUserID := middleware.GetAuthUserIDFromContext(r)
 
 	log.Printf("[FOLLOW] targetUser.ID=%d, loggedInUserID=%d\n", targetUser.ID, loggedInUserID)
 
@@ -95,7 +96,7 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 }
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	targetUser := getTargetUserFromContext(r) // user from URL param
-	loggedInUserID := int64(4)                // TODO: Replace with actual logged-in user ID from auth/session
+	loggedInUserID := middleware.GetAuthUserIDFromContext(r)
 
 	if targetUser.ID == loggedInUserID {
 		app.badRequestError(w, r, errors.New("you cannot unfollow yourself"))
@@ -120,7 +121,7 @@ type feedResponse struct {
 }
 
 func (app *application) getUserFeedHandler(w http.ResponseWriter, r *http.Request) {
-	userID := int64(1) // TODO: replace with auth user ID
+	userID := middleware.GetAuthUserIDFromContext(r)
 
 	params := utils.ParseQueryParams(r)
 

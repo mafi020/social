@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
+	mid "github.com/mafi020/social/internal/middleware"
 	"github.com/mafi020/social/internal/store"
 	"go.uber.org/zap"
 )
@@ -56,45 +57,56 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", app.registerUserHandler)
+			r.Post("/login", app.loginHandler)
+			r.Post("/logout", app.logoutHandler)
 		})
 
-		r.Route("/invitations", func(r chi.Router) {
-			r.Post("/", app.createInvitationHandler)
-			r.Get("/accept", app.acceptInvitationHandler)
-		})
+		r.Group(func(r chi.Router) {
+			r.Use(mid.AuthMiddleware)
 
-		r.Route("/users", func(r chi.Router) {
-			r.Route("/{userID}", func(r chi.Router) {
-				r.Use(app.userFromRouteMiddleware)
-
-				r.Get("/", app.getUserHandler)
-				r.Delete("/", app.deleteUserHandler)
-				r.Put("/follow", app.followUserHandler)
-				r.Put("/unfollow", app.unfollowUserHandler)
+			r.Route("/refresh", func(r chi.Router) {
+				r.Post("/", app.refreshHandler)
 			})
 
-			r.Group(func(r chi.Router) {
-				r.Get("/feed", app.getUserFeedHandler)
+			r.Route("/invitations", func(r chi.Router) {
+				r.Post("/", app.createInvitationHandler)
+				r.Get("/accept", app.acceptInvitationHandler)
+			})
+
+			r.Route("/users", func(r chi.Router) {
+				r.Route("/{userID}", func(r chi.Router) {
+					r.Use(app.userFromRouteMiddleware)
+
+					r.Get("/", app.getUserHandler)
+					r.Delete("/", app.deleteUserHandler)
+					r.Put("/follow", app.followUserHandler)
+					r.Put("/unfollow", app.unfollowUserHandler)
+				})
+
+				r.Group(func(r chi.Router) {
+					r.Get("/feed", app.getUserFeedHandler)
+				})
+			})
+
+			r.Route("/posts", func(r chi.Router) {
+				r.Post("/", app.createPostHandler)
+				r.Route("/{postID}", func(r chi.Router) {
+					r.Get("/", app.getPostHandler)
+					r.Delete("/", app.deletePostHandler)
+					r.Patch("/", app.updatePostHandler)
+				})
+			})
+
+			r.Route("/comments", func(r chi.Router) {
+				r.Post("/", app.createCommentHandler)
+				r.Route("/{commentID}", func(r chi.Router) {
+					r.Get("/", app.getCommentHandler)
+					r.Patch("/", app.updateCommentHandler)
+					r.Delete("/", app.deleteCommentHandler)
+				})
 			})
 		})
 
-		r.Route("/posts", func(r chi.Router) {
-			r.Post("/", app.createPostHandler)
-			r.Route("/{postID}", func(r chi.Router) {
-				r.Get("/", app.getPostHandler)
-				r.Delete("/", app.deletePostHandler)
-				r.Patch("/", app.updatePostHandler)
-			})
-		})
-
-		r.Route("/comments", func(r chi.Router) {
-			r.Post("/", app.createCommentHandler)
-			r.Route("/{commentID}", func(r chi.Router) {
-				r.Get("/", app.getCommentHandler)
-				r.Patch("/", app.updateCommentHandler)
-				r.Delete("/", app.deleteCommentHandler)
-			})
-		})
 	})
 
 	return r

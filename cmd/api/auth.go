@@ -2,9 +2,12 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/mafi020/social/internal/dto"
+	"github.com/mafi020/social/internal/env"
 	"github.com/mafi020/social/internal/errs"
 	"github.com/mafi020/social/internal/utils"
 )
@@ -83,4 +86,92 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		app.internalServerError(w, r, err)
 		return
 	}
+}
+
+func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := utils.ReadJSON(r, &payload); err != nil {
+		app.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+	user, err := app.store.Users.GetByEmail(ctx, payload.Email)
+	if err != nil {
+		app.failedValidationError(w, r, map[string]string{"email": "Invalid email"})
+		return
+	}
+
+	fmt.Println("Pass =>", user.Password, payload.Password)
+
+	if !utils.CheckPassword(user.Password, payload.Password) {
+		app.failedValidationError(w, r, map[string]string{"credentials": "invalid email or password"})
+		return
+	}
+
+	accessToken, err := utils.GenerateAccessToken(user.ID)
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
+	// Refresh token (opaque)
+	refreshRaw, err := utils.GenerateOpaqueToken(32)
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+	refreshHash := utils.HashToken(refreshRaw)
+	expiresAt := utils.RefreshExpiry(7) // 7 days
+
+	ua := r.UserAgent()
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
+	}
+
+	if _, err := app.store.RefreshTokens.Create(ctx, user.ID, refreshHash, ua, ip, expiresAt); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
+	env := env.GetEnvOrPanic("ENVIRONMENT")
+
+	// httpOnly cookie for refresh token
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshRaw,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   env == "production", // true in prod (HTTPS)
+		Expires:  expiresAt,
+	})
+
+	if err := utils.JSONResponse(w, http.StatusOK, map[string]string{"access_token": accessToken}); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie("refresh_token")
+	if err == nil && c.Value != "" {
+		hash := utils.HashToken(c.Value)
+		_ = app.store.RefreshTokens.Revoke(r.Context(), hash) // ignore error
+	}
+	// Clear cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false, // true in prod
+		MaxAge:   -1,
+	})
+	w.WriteHeader(http.StatusNoContent)
 }
