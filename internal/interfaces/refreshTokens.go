@@ -13,4 +13,5 @@ type RefreshTokensInterface interface {
 	Revoke(context.Context, string) error
 	RevokeAllForUser(context.Context, int64) error
 	CleanupExpired(context.Context) (int64, error)
+	RevokeForDevice(context.Context, int64, string, string) error
 }

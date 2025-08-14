@@ -130,6 +130,12 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
 	}
 
+	// Revoke any existing tokens for this user/device
+	if err := app.store.RefreshTokens.RevokeForDevice(ctx, user.ID, ua, ip); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
 	if _, err := app.store.RefreshTokens.Create(ctx, user.ID, refreshHash, ua, ip, expiresAt); err != nil {
 		app.internalServerError(w, r, err)
 		return

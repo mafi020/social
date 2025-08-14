@@ -81,3 +81,19 @@ func (s *RefreshTokensStore) CleanupExpired(ctx context.Context) (int64, error) 
 	n, _ := res.RowsAffected()
 	return n, nil
 }
+
+// In internal/store/refresh_tokens.go
+
+func (s *RefreshTokensStore) RevokeForDevice(ctx context.Context, userID int64, userAgent, ipAddress string) error {
+	query := `
+		UPDATE refresh_tokens
+		SET revoked_at = NOW()
+		WHERE user_id = $1
+		  AND user_agent = $2
+		  AND ip_address = $3
+		  AND revoked_at IS NULL
+		  AND expires_at > NOW()
+	`
+	_, err := s.db.ExecContext(ctx, query, userID, userAgent, ipAddress)
+	return err
+}
