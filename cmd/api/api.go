@@ -58,15 +58,22 @@ func (app *application) mount() http.Handler {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", app.registerUserHandler)
 			r.Post("/login", app.loginHandler)
-			r.Post("/logout", app.logoutHandler)
+			r.Group(func(r chi.Router) {
+				r.Use(mid.AuthMiddleware)
+				r.Post("/logout", app.logoutHandler)
+			})
+		})
+
+		r.Route("/refresh", func(r chi.Router) {
+			r.Post("/", app.refreshHandler)
 		})
 
 		r.Group(func(r chi.Router) {
 			r.Use(mid.AuthMiddleware)
 
-			r.Route("/refresh", func(r chi.Router) {
-				r.Post("/", app.refreshHandler)
-			})
+			// r.Route("/refresh", func(r chi.Router) {
+			// 	r.Post("/", app.refreshHandler)
+			// })
 
 			r.Route("/invitations", func(r chi.Router) {
 				r.Post("/", app.createInvitationHandler)

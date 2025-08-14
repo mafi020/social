@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 
@@ -105,8 +104,6 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("Pass =>", user.Password, payload.Password)
-
 	if !utils.CheckPassword(user.Password, payload.Password) {
 		app.failedValidationError(w, r, map[string]string{"credentials": "invalid email or password"})
 		return
@@ -147,7 +144,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   env == "production", // true in prod (HTTPS)
+		Secure:   env == "production",
 		Expires:  expiresAt,
 	})
 
@@ -161,16 +158,17 @@ func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("refresh_token")
 	if err == nil && c.Value != "" {
 		hash := utils.HashToken(c.Value)
-		_ = app.store.RefreshTokens.Revoke(r.Context(), hash) // ignore error
+		_ = app.store.RefreshTokens.Revoke(r.Context(), hash)
 	}
 	// Clear cookie
+	env := env.GetEnvOrPanic("ENVIRONMENT")
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false, // true in prod
+		Secure:   env == "production",
 		MaxAge:   -1,
 	})
 	w.WriteHeader(http.StatusNoContent)

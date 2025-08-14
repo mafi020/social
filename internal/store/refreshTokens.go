@@ -25,15 +25,15 @@ func (s *RefreshTokensStore) Create(ctx context.Context, userID int64, tokenHash
 }
 
 // GetByHash returns a token row by its hash (only if not revoked).
-func (s *RefreshTokensStore) GetByHash(ctx context.Context, tokenHash string) (*dto.RefreshToken, error) {
-	query := `
-		SELECT id, user_id, token_hash, user_agent, COALESCE(ip_address::text, ''), expires_at, revoked_at, created_at, updated_at
+func (s *RefreshTokensStore) GetByHash(ctx context.Context, hash string) (*dto.RefreshToken, error) {
+	const q = `
+		SELECT user_id, token_hash, user_agent, ip_address, expires_at, revoked_at, created_at, updated_at
 		FROM refresh_tokens
 		WHERE token_hash = $1
+		LIMIT 1
 	`
 	var rt dto.RefreshToken
-	err := s.db.QueryRowContext(ctx, query, tokenHash).Scan(
-		&rt.ID,
+	err := s.db.QueryRowContext(ctx, q, hash).Scan(
 		&rt.UserID,
 		&rt.TokenHash,
 		&rt.UserAgent,
@@ -50,22 +50,24 @@ func (s *RefreshTokensStore) GetByHash(ctx context.Context, tokenHash string) (*
 }
 
 // Revoke marks a token as revoked now.
-func (s *RefreshTokensStore) Revoke(ctx context.Context, tokenHash string) error {
-	query := `
+func (s *RefreshTokensStore) Revoke(ctx context.Context, hash string) error {
+	const q = `
 		UPDATE refresh_tokens
 		SET revoked_at = NOW()
 		WHERE token_hash = $1 AND revoked_at IS NULL
 	`
-	_, err := s.db.ExecContext(ctx, query, tokenHash)
+	_, err := s.db.ExecContext(ctx, q, hash)
 	return err
 }
 
 // RevokeAllForUser revokes all active refresh tokens for a user.
 func (s *RefreshTokensStore) RevokeAllForUser(ctx context.Context, userID int64) error {
-	_, err := s.db.ExecContext(ctx,
-		`UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL`,
-		userID,
-	)
+	const q = `
+		UPDATE refresh_tokens
+		SET revoked_at = NOW()
+		WHERE user_id = $1 AND revoked_at IS NULL
+	`
+	_, err := s.db.ExecContext(ctx, q, userID)
 	return err
 }
 

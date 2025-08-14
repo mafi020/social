@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"time"
 
@@ -10,30 +12,53 @@ import (
 func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("refresh_token")
 	if err != nil || c.Value == "" {
-		http.Error(w, "missing refresh token", http.StatusUnauthorized)
+		app.unAuthorizedError(w, r, errors.New("missing refresh token"))
 		return
 	}
 	raw := c.Value
 	hash := utils.HashToken(raw)
 
 	ctx := r.Context()
+
+	// Fetch the token *even if revoked* — critical for reuse detection
 	rt, err := app.store.RefreshTokens.GetByHash(ctx, hash)
 	if err != nil {
-		http.Error(w, "invalid refresh token", http.StatusUnauthorized)
-		return
-	}
-	if rt.RevokedAt != nil || time.Now().After(rt.ExpiresAt) {
-		http.Error(w, "refresh token expired or revoked", http.StatusUnauthorized)
+		// Unknown/garbage token
+		app.unAuthorizedError(w, r, errors.New("invalid refresh token"))
 		return
 	}
 
-	// Rotate: revoke old
+	// ===== Reuse detection =====
+	// If a token that was already rotated (revoked) shows up again, it’s almost certainly stolen.
+	if rt.RevokedAt != nil {
+		// Defensive response: revoke ALL refresh tokens for this user
+		_ = app.store.RefreshTokens.RevokeAllForUser(ctx, rt.UserID)
+
+		// Optional: log a security event, notify the user, etc.
+		app.logger.Warnw("refresh token reuse detected",
+			"user_id", rt.UserID,
+			"ip", rt.IPAddress,
+			"ua", rt.UserAgent,
+			"revoked_at", rt.RevokedAt,
+		)
+
+		app.unAuthorizedError(w, r, errors.New("token reuse detected; all sessions revoked"))
+		return
+	}
+
+	// Normal validation
+	if time.Now().After(rt.ExpiresAt) {
+		app.unAuthorizedError(w, r, errors.New("refresh token expired"))
+		return
+	}
+
+	// Rotate: revoke the current token
 	if err := app.store.RefreshTokens.Revoke(ctx, hash); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
 
-	// Issue new refresh
+	// Mint a new refresh token (opaque)
 	newRaw, err := utils.GenerateOpaqueToken(32)
 	if err != nil {
 		app.internalServerError(w, r, err)
@@ -45,21 +70,22 @@ func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	ua := r.UserAgent()
 	ip := r.Header.Get("X-Forwarded-For")
 	if ip == "" {
-		ip = r.RemoteAddr
+		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
 	}
+
 	if _, err := app.store.RefreshTokens.Create(ctx, rt.UserID, newHash, ua, ip, newExp); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
 
-	// New access
+	// New access token
 	access, err := utils.GenerateAccessToken(rt.UserID)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
 
-	// Set new cookie
+	// Set new refresh cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    newRaw,
