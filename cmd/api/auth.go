@@ -97,6 +97,10 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := utils.ValidateStruct(&payload); err != nil {
+		app.failedValidationError(w, r, err)
+	}
+
 	ctx := r.Context()
 	user, err := app.store.Users.GetByEmail(ctx, payload.Email)
 	if err != nil {
